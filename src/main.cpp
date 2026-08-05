@@ -1,65 +1,48 @@
+#include <vector>
 #include <Arduino.h>
 #include <WiFi.h>
 #include <esp_log.h>
 #include <esp_https_server.h>
+#include "prometheus.h"
 #include "config.h"
+#include "pins.h"
 #include "secrets.h"
 
-#define STATUS_LED 2
+using namespace std;
 
-const char* version  = "v0.1-dev";
+static const char* TAG = "iot_sensor";
+const char* Version    = "v0.1-dev";
 
-std::string build_metric_header(const char* name, const char* type, const char* help) {
-    return "# HELP " + std::string(name) + " " + std::string(help)
-       + "\n# TYPE " + std::string(name) + " " + std::string(type) + "\n";
+vector<metric_t> info_metric(const char* name) {
+    metric_t info {
+        .labels = {{ "device", WiFi.getHostname() }, { "version", Version }},
+        .value = "1"
+    };
+    return { info };
 }
 
-std::string build_metric(const char* name, std::initializer_list<std::pair<std::string_view, std::string_view>> labels, const char* value) {
-    std::string metric = name;
-    if (labels.size() > 0) {
-        metric += '{';
-        bool first = true;
-        for (auto& [k, v] : labels) {
-            if (!first && labels.size() > 1)
-                metric += ',';
-            metric += k;
-            metric += "=\"";
-            metric += v;
-            metric += '"'; 
-            first = false;
-        }
-        metric += '}';
-    }
-
-    return metric + " " + value + "\n";
+vector<metric_t> rssi_metric(const char* name) {
+    metric_t rssi { .value = to_string(WiFi.RSSI()) };
+    return { rssi };
 }
 
-// response += build_metric_header("esp32_sensor_", "gauge", "");
-// response += build_metric("esp32_sensor_", "");
+void register_metrics() {
+    metric_metadata_t infoMeta = {
+        .name = "esp32_sensor_info",
+        .type = "counter",
+        .help = "Generall information about the sensor.",
+        .metric_getter = &info_metric
+    };
+    prometheus_register_metric(infoMeta);
 
-esp_err_t prometheus_endpoint_handler(httpd_req_t *req) {
-    digitalWrite(STATUS_LED, HIGH);
-
-    std::string response = build_metric_header("esp32_sensor_info", "counter", "Generall information about the sensor.");
-    response += build_metric("esp32_sensor_info", {{ "device", WiFi.getHostname() }, { "version", version }}, "1");
-
-    response += build_metric_header("esp32_sensor_wifi_rssi", "gauge", "The RSSI (signal strength) of the connected network.");
-    response += build_metric("esp32_sensor_wifi_rssi", {}, std::to_string(WiFi.RSSI()).c_str());
-
-    response += "# EOF";
-
-    httpd_resp_set_type(req, "application/openmetrics-text; version=1.0.0; charset=utf-8");
-    httpd_resp_send(req, response.c_str(), response.length());
-
-    digitalWrite(STATUS_LED, LOW);
-    return ESP_OK;
+    metric_metadata_t rssiMeta = {
+        .name = "esp32_sensor_wifi_rssi",
+        .type = "gauge",
+        .help = "The RSSI (signal strength) of the connected network.",
+        .metric_getter = &rssi_metric
+    };
+    prometheus_register_metric(rssiMeta);
 }
-
-httpd_uri_t prometheus_endpoint = {
-    .uri = "/metrics",
-    .method = HTTP_GET,
-    .handler = prometheus_endpoint_handler
-};
 
 static httpd_handle_t server = NULL;
 esp_err_t start_mtls_server() {
@@ -86,6 +69,7 @@ esp_err_t start_mtls_server() {
 }
 
 void halt_system() {
+    httpd_stop(server);
     while (true) {
         digitalWrite(STATUS_LED, HIGH);
         delay(100);
@@ -95,22 +79,17 @@ void halt_system() {
 }
 
 void WiFiEventHandler(WiFiEvent_t event, WiFiEventInfo_t info) {
-  if (event == ARDUINO_EVENT_WIFI_STA_DISCONNECTED) {
-    Serial.printf("WiFi disconnected. Reason: %d\n", info.wifi_sta_disconnected.reason);
-  }
+    if (event == ARDUINO_EVENT_WIFI_STA_DISCONNECTED) {
+        ESP_LOGW(TAG, "WiFi disconnected. Reason: %s", info.wifi_sta_disconnected.reason);
+    }
 }
 
 void setup() {
-    pinMode(STATUS_LED, OUTPUT);
-  
     Serial.begin(115200);
-    Serial.print("IoT Sensor ");
-    Serial.print(WiFi.getHostname());
-    Serial.print("- Version ");
-    Serial.println(version);
+    ESP_LOGI(TAG, "IoT Sensor %s - %s", WiFi.getHostname(), Version);
+    pinMode(STATUS_LED, OUTPUT);  
 
-    Serial.print("Try connecting to ");
-    Serial.println(ssid);
+    ESP_LOGI(TAG,"Try connecting to %s...", ssid);
     WiFi.setScanMethod(WIFI_ALL_CHANNEL_SCAN);
     WiFi.setSortMethod(WIFI_CONNECT_AP_BY_SIGNAL);
     WiFi.setAutoReconnect(true);
@@ -125,28 +104,22 @@ void setup() {
         Serial.print(".");
     }
     Serial.println();
-    Serial.print("Successfully connected to !");
-    Serial.println(WiFi.BSSIDstr());
+    ESP_LOGI(TAG, "Successfully connected to %s!", WiFi.BSSIDstr().c_str());
+
+    register_metrics();
 
     esp_err_t start_code = start_mtls_server();
     if (start_code == ESP_OK) {
-        Serial.print("Started listening on ");
-        Serial.print(WiFi.localIP());
-        Serial.println(":9100");
+        ESP_LOGI(TAG, "Started listening on %s:9100", WiFi.localIP().toString().c_str());
     }
     else {
-        Serial.print("An error occurred while starting HTTPS server: ");
-        Serial.print(esp_err_to_name(start_code));
-        Serial.print(" (");
-        Serial.print(start_code);
-        Serial.println(")");
+        ESP_LOGE(TAG, "An error occurred while starting HTTPS server: %s (%i)", esp_err_to_name(start_code), start_code);
         halt_system();
     }
 }
 
 void loop() {
-    Serial.print("Running, WiFi RSSI: ");
-    Serial.println(String(WiFi.RSSI()));
+    ESP_LOGD(TAG, "Running, WiFi RSSI: %i", WiFi.RSSI());
     delay(5000);
 }
 
