@@ -1,0 +1,1 @@
+const int STATUS_LED = 2;

@@ -6,7 +6,7 @@
 #include <esp_log.h>
 #include <esp_https_server.h>
 #include <lwip/sockets.h>
-#include "pins.h"
+#include "config.h"
 
 using namespace std;
 

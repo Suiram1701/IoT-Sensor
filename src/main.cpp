@@ -3,9 +3,9 @@
 #include <WiFi.h>
 #include <esp_log.h>
 #include <esp_https_server.h>
+#include "sensor_registry.h"
 #include "prometheus.h"
 #include "config.h"
-#include "pins.h"
 #include "secrets.h"
 
 using namespace std;
@@ -30,7 +30,7 @@ void register_metrics() {
     metric_metadata_t infoMeta = {
         .name = "esp32_sensor_info",
         .type = "counter",
-        .help = "Generall information about the sensor.",
+        .help = "General information about the sensor.",
         .metric_getter = &info_metric
     };
     prometheus_register_metric(infoMeta);
@@ -78,22 +78,16 @@ void halt_system() {
     }
 }
 
-void WiFiEventHandler(WiFiEvent_t event, WiFiEventInfo_t info) {
-    if (event == ARDUINO_EVENT_WIFI_STA_DISCONNECTED) {
-        ESP_LOGW(TAG, "WiFi disconnected. Reason: %s", info.wifi_sta_disconnected.reason);
-    }
+void wifi_disconected_handler(WiFiEvent_t event, WiFiEventInfo_t info) {
+    ESP_LOGW(TAG, "WiFi disconnected. Reason: %s", info.wifi_sta_disconnected.reason);
 }
 
-void setup() {
-    Serial.begin(115200);
-    ESP_LOGI(TAG, "IoT Sensor %s - %s", WiFi.getHostname(), Version);
-    pinMode(STATUS_LED, OUTPUT);  
-
+void setup_wifi() {
     ESP_LOGI(TAG,"Try connecting to %s...", ssid);
     WiFi.setScanMethod(WIFI_ALL_CHANNEL_SCAN);
     WiFi.setSortMethod(WIFI_CONNECT_AP_BY_SIGNAL);
     WiFi.setAutoReconnect(true);
-    WiFi.onEvent(WiFiEventHandler);
+    WiFi.onEvent(wifi_disconected_handler, ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
     WiFi.begin(ssid, password);
 
     while (WiFi.status() != WL_CONNECTED) {
@@ -106,6 +100,27 @@ void setup() {
     Serial.println();
     ESP_LOGI(TAG, "Successfully connected to %s!", WiFi.BSSIDstr().c_str());
 
+}
+
+extern "C" void app_main() {
+    initArduino();
+
+    // Setup
+    Serial.begin(115200);
+    ESP_LOGI(TAG, "IoT Sensor %s - %s", WiFi.getHostname(), Version);
+    pinMode(STATUS_LED, OUTPUT);  
+
+    for (auto& entry : sensor_registry::sensors()) {
+        esp_err_t result = entry->init();
+        if (result == ESP_OK) {
+            ESP_LOGI(TAG, "Loading sensor driver/module %s", entry->name);
+        }
+        else {
+            ESP_LOGE(TAG, "An error occurred while loading driver/module %s: %s (%i)", entry->name, esp_err_to_name(result), result);
+        }
+    }
+
+    setup_wifi();
     register_metrics();
 
     esp_err_t start_code = start_mtls_server();
@@ -116,18 +131,10 @@ void setup() {
         ESP_LOGE(TAG, "An error occurred while starting HTTPS server: %s (%i)", esp_err_to_name(start_code), start_code);
         halt_system();
     }
-}
 
-void loop() {
-    ESP_LOGD(TAG, "Running, WiFi RSSI: %i", WiFi.RSSI());
-    delay(5000);
-}
-
-extern "C" void app_main() {
-    initArduino();
-    setup();
+    // Loop
     while (true) {
-        loop();
-        vTaskDelay(pdMS_TO_TICKS(1));     // Time to run other tasks like WiFi
+        ESP_LOGD(TAG, "Running, WiFi RSSI: %i", WiFi.RSSI());
+        delay(5000);
     }
 }

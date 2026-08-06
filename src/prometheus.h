@@ -7,19 +7,19 @@
 
 using namespace std;
 
-struct metric_t {
+typedef struct {
     const vector<pair<string_view, string_view>> labels;
     const string_view value;
-};
+} metric_t;
 
 typedef vector<metric_t> (*get_metric)(const char* name);
 
-struct metric_metadata_t {
+typedef struct {
     const char* name;
     const char* type;
     const char* help;
     const get_metric metric_getter;
-};
+} metric_metadata_t;
 
 esp_err_t prometheus_register_metric(metric_metadata_t& metric);
 
