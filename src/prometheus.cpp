@@ -75,7 +75,9 @@ esp_err_t prometheus_endpoint_handler(httpd_req_t *req) {
         response += build_metric_header(metadata.name, metadata.type, metadata.help);
 
         for (auto& metric : metadata.metric_getter(metadata.name)) {
-            response += build_metric(metadata.name, metric.labels, metric.value.data());
+            string metricStr = build_metric(metadata.name, metric.labels, metric.value.data());
+            ESP_LOGD(TAG, "Read metric: %s", metricStr.c_str());
+            response += metricStr;
         }
     }
     response += "# EOF";

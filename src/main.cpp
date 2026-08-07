@@ -26,7 +26,7 @@ vector<metric_t> rssi_metric(const char* name) {
     return { rssi };
 }
 
-void register_metrics() {
+void register_base_metrics() {
     metric_metadata_t infoMeta = {
         .name = "esp32_sensor_info",
         .type = "counter",
@@ -95,9 +95,7 @@ void setup_wifi() {
         delay(50);
         digitalWrite(STATUS_LED, LOW);
         delay(500);
-        Serial.print(".");
     }
-    Serial.println();
     ESP_LOGI(TAG, "Successfully connected to %s!", WiFi.BSSIDstr().c_str());
 
 }
@@ -106,14 +104,13 @@ extern "C" void app_main() {
     initArduino();
 
     // Setup
-    Serial.begin(115200);
     ESP_LOGI(TAG, "IoT Sensor %s - %s", WiFi.getHostname(), Version);
     pinMode(STATUS_LED, OUTPUT);  
-
+    register_base_metrics();
     for (auto& entry : sensor_registry::sensors()) {
         esp_err_t result = entry->init();
         if (result == ESP_OK) {
-            ESP_LOGI(TAG, "Loading sensor driver/module %s", entry->name);
+            ESP_LOGI(TAG, "Loaded sensor driver/module %s", entry->name);
         }
         else {
             ESP_LOGE(TAG, "An error occurred while loading driver/module %s: %s (%i)", entry->name, esp_err_to_name(result), result);
@@ -121,7 +118,6 @@ extern "C" void app_main() {
     }
 
     setup_wifi();
-    register_metrics();
 
     esp_err_t start_code = start_mtls_server();
     if (start_code == ESP_OK) {
