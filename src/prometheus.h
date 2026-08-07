@@ -9,7 +9,7 @@ using namespace std;
 
 typedef struct {
     const vector<pair<string_view, string_view>> labels;
-    const string_view value;
+    const string value;
 } metric_t;
 
 typedef vector<metric_t> (*get_metric)(const char* name);

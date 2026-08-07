@@ -17,6 +17,7 @@ static vector<metric_metadata_t> RegisterdMetrics;
 esp_err_t prometheus_register_metric(metric_metadata_t& metric) {
     for (auto& registerd : RegisterdMetrics) {
         if (strcmp(registerd.name, metric.name) == 0) {     // Already registerd
+            ESP_LOGE(TAG, "Metric %s already registered!", metric.name);
             return ESP_FAIL;
         }
     }
@@ -75,7 +76,7 @@ esp_err_t prometheus_endpoint_handler(httpd_req_t *req) {
         response += build_metric_header(metadata.name, metadata.type, metadata.help);
 
         for (auto& metric : metadata.metric_getter(metadata.name)) {
-            string metricStr = build_metric(metadata.name, metric.labels, metric.value.data());
+            string metricStr = build_metric(metadata.name, metric.labels, metric.value.c_str());
             ESP_LOGD(TAG, "Read metric: %s", metricStr.c_str());
             response += metricStr;
         }

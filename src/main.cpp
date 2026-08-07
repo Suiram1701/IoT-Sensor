@@ -16,7 +16,7 @@ const char* Version    = "v0.1-dev";
 vector<metric_t> info_metric(const char* name) {
     metric_t info {
         .labels = {{ "device", WiFi.getHostname() }, { "version", Version }},
-        .value = "1"
+        .value  = "1"
     };
     return { info };
 }
@@ -97,7 +97,6 @@ void setup_wifi() {
         delay(500);
     }
     ESP_LOGI(TAG, "Successfully connected to %s!", WiFi.BSSIDstr().c_str());
-
 }
 
 extern "C" void app_main() {
@@ -108,13 +107,15 @@ extern "C" void app_main() {
     pinMode(STATUS_LED, OUTPUT);  
     register_base_metrics();
     for (auto& entry : sensor_registry::sensors()) {
+        digitalWrite(STATUS_LED, HIGH);
         esp_err_t result = entry->init();
         if (result == ESP_OK) {
             ESP_LOGI(TAG, "Loaded sensor driver/module %s", entry->name);
         }
         else {
-            ESP_LOGE(TAG, "An error occurred while loading driver/module %s: %s (%i)", entry->name, esp_err_to_name(result), result);
+            ESP_LOGE(TAG, "An error occurred while loading driver/module (skipped) %s: %s (%i)", entry->name, esp_err_to_name(result), result);
         }
+        digitalWrite(STATUS_LED, LOW);
     }
 
     setup_wifi();
