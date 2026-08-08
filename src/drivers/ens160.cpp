@@ -9,6 +9,7 @@
 #include "../prometheus.h"
 #include "config.h"
 
+#ifdef USE_ENS160
 #ifndef ENS160_I2C_ADDRESS
 #error "Definition of ENS160_I2C_ADDRESS is required!"
 #endif
@@ -21,7 +22,7 @@ static ENS160 Ens160;
 static bool ReadingAllowed;
 
 // Fetches data for other metric of the ens160 and will be invoked first because its registered before the other metrics
-vector<metric_t> status_metric(const char* name) {
+static vector<metric_t> status_metric(const char* name) {
     Result result = Ens160.update();
     if (result != RESULT_OK) {
         ESP_LOGE(TAG, "Updating ens160 data failed with error code %i", result);
@@ -35,7 +36,7 @@ vector<metric_t> status_metric(const char* name) {
     return { status };
 }
 
-vector<metric_t> quality_metric(const char* name) {
+static vector<metric_t> quality_metric(const char* name) {
     if (!ReadingAllowed) {
         return { };
     }
@@ -44,7 +45,7 @@ vector<metric_t> quality_metric(const char* name) {
     return { quality };
 }
 
-vector<metric_t> eco2_metric(const char* name) {
+static vector<metric_t> eco2_metric(const char* name) {
     if (!ReadingAllowed) {
         return { };
     }
@@ -53,7 +54,7 @@ vector<metric_t> eco2_metric(const char* name) {
     return { eco2 };
 }
 
-vector<metric_t> tvoc_metric(const char* name) {
+static vector<metric_t> tvoc_metric(const char* name) {
     if (!ReadingAllowed) {
         return { };
     }
@@ -62,7 +63,7 @@ vector<metric_t> tvoc_metric(const char* name) {
     return { tvoc };
 }
 
-vector<metric_t> gpr_metric(const char* name) {
+static vector<metric_t> gpr_metric(const char* name) {
     if (!ReadingAllowed) {
         return { };
     }
@@ -147,10 +148,8 @@ esp_err_t ens160_init() {
     Ens160.startStandardMeasure();
     ens160_register_metrics();
     ESP_LOGI(TAG, "ENS160 specific metrics registered");
-
     return ESP_OK;
 }
 
-#ifdef USE_ENS160
 REGISTER_SENSOR("ens160", ens160_init)
 #endif

@@ -4,7 +4,6 @@
 #include <esp_err.h>
 
 void ens160_register_metrics();
-
 esp_err_t ens160_init();
 
 #endif
