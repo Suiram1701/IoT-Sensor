@@ -13,17 +13,17 @@ typedef struct {
     const init_fn init;
 } sensor_driver_t;
 
-class sensor_registry {
+class SensorRegistry {
 public:
-    static vector<sensor_driver_t*>& sensors() {
-        static vector<sensor_driver_t*> instance;
-        return instance;
-    }
+    static esp_err_t registerModule(sensor_driver_t* driver);
+    static uint8_t loadAllModules();
+private:
+    static vector<sensor_driver_t*>& modules();
 };
 
 #define REGISTER_SENSOR(sensor_name, fn)                                   \
     static sensor_driver_t instance = { .name = sensor_name, .init = fn }; \
-    static bool instance_registered __attribute__((used)) =         \
-        (sensor_registry::sensors().push_back(&instance), true);
+    static esp_err_t instance_registered __attribute__((used)) =           \
+        (SensorRegistry::registerModule(&instance));
 
 #endif

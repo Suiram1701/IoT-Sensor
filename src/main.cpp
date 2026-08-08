@@ -103,20 +103,11 @@ extern "C" void app_main() {
     initArduino();
 
     // Setup
+    Serial.begin(115200);
     ESP_LOGI(TAG, "IoT Sensor %s - %s", WiFi.getHostname(), Version);
     pinMode(STATUS_LED, OUTPUT);  
     register_base_metrics();
-    for (auto& entry : sensor_registry::sensors()) {
-        digitalWrite(STATUS_LED, HIGH);
-        esp_err_t result = entry->init();
-        if (result == ESP_OK) {
-            ESP_LOGI(TAG, "Loaded sensor driver/module %s", entry->name);
-        }
-        else {
-            ESP_LOGE(TAG, "An error occurred while loading driver/module (skipped) %s: %s (%i)", entry->name, esp_err_to_name(result), result);
-        }
-        digitalWrite(STATUS_LED, LOW);
-    }
+    SensorRegistry::loadAllModules();
 
     setup_wifi();
 

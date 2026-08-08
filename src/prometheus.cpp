@@ -17,7 +17,7 @@ static vector<metric_metadata_t> RegisterdMetrics;
 esp_err_t prometheus_register_metric(metric_metadata_t& metric) {
     for (auto& registerd : RegisterdMetrics) {
         if (strcmp(registerd.name, metric.name) == 0) {     // Already registerd
-            ESP_LOGE(TAG, "Metric %s already registered!", metric.name);
+            ESP_LOGW(TAG, "Metric %s already registered!", metric.name);
             return ESP_FAIL;
         }
     }
