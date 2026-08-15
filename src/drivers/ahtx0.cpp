@@ -81,7 +81,6 @@ esp_err_t ahtx0_init() {
     Humidity->printSensorDetails();
 
     ahtx0_register_metrics();
-    ESP_LOGI(TAG, "AHTX0 specific metrics registered");
     return ESP_OK;
 }
 

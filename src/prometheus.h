@@ -8,7 +8,7 @@
 using namespace std;
 
 typedef struct {
-    const vector<pair<string_view, string_view>> labels;
+    const vector<pair<const char*, string>> labels;
     const string value;
 } metric_t;
 

@@ -31,7 +31,7 @@ string build_metric_header(const char* name, const char* type, const char* help)
        + "\n# TYPE " + string(name) + " " + string(type) + "\n";
 }
 
-string build_metric(const char* name, const vector<pair<string_view, string_view>> labels, const char* value) {
+string build_metric(const char* name, const vector<pair<const char*, string>> labels, const char* value) {
     string metric = name;
     if (labels.size() > 0) {
         metric += '{';

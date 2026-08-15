@@ -147,7 +147,6 @@ esp_err_t ens160_init() {
 
     Ens160.startStandardMeasure();
     ens160_register_metrics();
-    ESP_LOGI(TAG, "ENS160 specific metrics registered");
     return ESP_OK;
 }
 
