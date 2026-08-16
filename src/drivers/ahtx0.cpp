@@ -1,5 +1,3 @@
-#include "ahtx0.h"
-
 #include <string>
 #include <vector>
 #include <esp_log.h>

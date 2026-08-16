@@ -1,5 +1,3 @@
-#include "analog.h"
-
 #include <string>
 #include <vector>
 #include <Arduino.h>
