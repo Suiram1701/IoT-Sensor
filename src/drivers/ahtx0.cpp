@@ -8,7 +8,7 @@
 
 #ifdef USE_AHTX0
 #ifndef AHTX0_I2C_ADDRESS
-#error "Definition of AHTX0_I2C_ADDRESS is required!" 
+#define AHTX0_I2C_ADDRESS 0x38     // Default address
 #endif
 
 using namespace std;

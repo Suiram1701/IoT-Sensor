@@ -9,7 +9,7 @@
 
 #ifdef USE_ENS160
 #ifndef ENS160_I2C_ADDRESS
-#error "Definition of ENS160_I2C_ADDRESS is required!"
+#define ENS160_I2C_ADDRESS 0x52     // Default value
 #endif
 
 using namespace std;
@@ -134,7 +134,6 @@ esp_err_t ens160_init() {
     }
 
     Ens160.begin(&Wire, ENS160_I2C_ADDRESS);
-
     while (!Ens160.init()) {
         ESP_LOGI(TAG, "Waiting for initialization...");
         delay(1000);
