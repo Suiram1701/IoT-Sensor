@@ -11,7 +11,7 @@
 using namespace std;
 
 static const char* TAG = "iot_sensor";
-const char* Version    = "v0.1-dev";
+const char* Version    = "v0.1";
 
 vector<metric_t> info_metric(const char* name) {
     metric_t info {
